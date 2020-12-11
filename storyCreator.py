@@ -157,7 +157,7 @@ def concludeStory(storyState, characters):
 
     storySequence.append("Thus, the story ends.")
 
-    if(storyState.numMonsters == storyState.numMonstersDead and soryState.numMonsters > 1):
+    if(storyState.numMonsters == storyState.numMonstersDead and storyState.numMonsters > 1):
         storySequence.append("The monsters were defeated.")
     elif(storyState.numMonsters == storyState.numMonstersDead):
         storySequence.append("The monsters was defeated.")
@@ -231,7 +231,7 @@ def actionOutcome(storyState, characters, character, action):
     """
     actionString = character.name + " " + action + " "
     if(action == Action.ATTACKED):
-        randomizer = random.randint(1,5)
+        randomizer = random.randint(1,100)
 
         if(isConflict(characters, character)):
             for otherCharacter in characters:
@@ -239,17 +239,17 @@ def actionOutcome(storyState, characters, character, action):
                    or not otherCharacter.alive):
                     continue
                 elif(character.isHuman() and otherCharacter.isMonster() 
-                     and randomizer == 1):
+                     and randomizer < 31):
                     storyState.numMonstersDead += 1
                     otherCharacter.alive = False
                     actionString += "the monster, " + otherCharacter.name + ", killing it. "
                     break
                 elif(character.isHuman() and otherCharacter.isMonster() 
-                     and randomizer > 1):
+                     and randomizer > 30):
                     actionString += "the monster, " + otherCharacter.name + ", but failed to kill it. "
                     break
                 elif(character.isMonster() and otherCharacter.isHuman()
-                     and randomizer > 1):
+                     and randomizer > 30):
                     storyState.numHumansDead += 1
                     otherCharacter.alive = False
 
@@ -259,7 +259,7 @@ def actionOutcome(storyState, characters, character, action):
                         actionString = character.name + " " + action + " " + otherCharacter.name + ", killing her. "
                     break
                 elif(character.isMonster() and otherCharacter.isHuman()
-                     and character.alive and randomizer == 1):
+                     and character.alive and randomizer < 31):
                     if(otherCharacter.gender == Gender.MALE):
                         actionString += otherCharacter.name + ", but he managed to get away. "
                     else:
@@ -267,9 +267,9 @@ def actionOutcome(storyState, characters, character, action):
                     break
 
     elif(action == Action.ESCAPED):
-        randomizer = random.randint(1,10)
+        randomizer = random.randint(1,100)
 
-        if(randomizer == 1):
+        if(randomizer < 11):
             character.position = -1
             storyState.numEscaped += 1
             actionString += "from the monsters' domain. "
@@ -390,7 +390,7 @@ if __name__ == '__main__':
                 storySequence.append(actionOutcome(storyState, characters, characters[i], characterActions[i]))
 
                 # Store results to database to determine the likelihood of actions
-                dataConnection.updateAction(characterActions[i])
+                dataConnection.updateAction(characterActions[i], characters[i].characterType)
 
             if((storyState.numHumansDead + storyState.numEscaped) == storyState.numHumans 
                 or storyState.numMonstersDead == storyState.numMonsters):
@@ -408,3 +408,7 @@ if __name__ == '__main__':
 
     dataConnection.updateOutcome(storyState)
     dataConnection.getOutcomes()
+    print("ATTACK: %s" % dataConnection.getActionUsage("attacked", "human"))
+    print("ESCAPE: %s" % dataConnection.getActionUsage("escaped", "human"))
+    print("INVESTIGATE: %s" % dataConnection.getActionUsage("investigated", "human"))
+    print("RAN: %s" % dataConnection.getActionUsage("ran", "human"))

@@ -19,10 +19,11 @@ class Database:
         c = conn.cursor()
 
         c.execute('''CREATE TABLE IF NOT EXISTS action_likelihood 
-                     (action VARCHAR(100) PRIMARY KEY,
+                     (action VARCHAR(100),
+                     agent_type VARCHAR(10),
                      times_used INT DEFAULT 0,
                      percentage DOUBLE DEFAULT 0,
-                     UNIQUE(action));
+                     PRIMARY KEY(action, agent_type));
             ''') 
 
         c.execute('''CREATE TABLE IF NOT EXISTS story_outcomes 
@@ -44,17 +45,29 @@ class Database:
 
         c = conn.cursor()
 
-        c.execute('''INSERT OR IGNORE INTO action_likelihood (action, times_used, percentage)
-                     VALUES ('escaped', 0, 0);''')
+        c.execute('''INSERT OR IGNORE INTO action_likelihood (action, agent_type, times_used, percentage)
+                     VALUES ('escaped', 'human', 0, 0);''')
 
-        c.execute('''INSERT OR IGNORE INTO action_likelihood (action, times_used, percentage)
-                     VALUES ('investigated', 0, 0);''')
+        c.execute('''INSERT OR IGNORE INTO action_likelihood (action, agent_type, times_used, percentage)
+                     VALUES ('investigated', 'human', 0, 0);''')
 
-        c.execute('''INSERT OR IGNORE INTO action_likelihood (action, times_used, percentage)
-                     VALUES ('ran', 0, 0);''')
+        c.execute('''INSERT OR IGNORE INTO action_likelihood (action, agent_type, times_used, percentage)
+                     VALUES ('ran', 'human', 0, 0);''')
 
-        c.execute('''INSERT OR IGNORE INTO action_likelihood (action, times_used, percentage)
-                     VALUES ('attacked', 0, 0);''')
+        c.execute('''INSERT OR IGNORE INTO action_likelihood (action, agent_type, times_used, percentage)
+                     VALUES ('attacked', 'human', 0, 0);''')
+
+        c.execute('''INSERT OR IGNORE INTO action_likelihood (action, agent_type, times_used, percentage)
+                     VALUES ('escaped', 'monster', 0, 0);''')
+
+        c.execute('''INSERT OR IGNORE INTO action_likelihood (action, agent_type, times_used, percentage)
+                     VALUES ('investigated', 'monster', 0, 0);''')
+
+        c.execute('''INSERT OR IGNORE INTO action_likelihood (action, agent_type, times_used, percentage)
+                     VALUES ('ran', 'monster', 0, 0);''')
+
+        c.execute('''INSERT OR IGNORE INTO action_likelihood (action, agent_type, times_used, percentage)
+                     VALUES ('attacked', 'monster', 0, 0);''')
 
         c.execute('''INSERT OR IGNORE INTO story_outcomes (winner, times_won)
                      VALUES ('monster', 0);''')
@@ -64,7 +77,7 @@ class Database:
 
         self.closeConnection(conn)
 
-    def determinePercent(self, action):
+    def determinePercent(self, action, character):
         """
             Brief: determinePercent
 
@@ -79,16 +92,19 @@ class Database:
         c = conn.cursor()
 
         c.execute('''SELECT *
-                     FROM [action_likelihood];''')
+                     FROM [action_likelihood]
+                     WHERE [agent_type] = ?;''', (character,))
 
         actionTotal = 0
         allActionTotal = 0
 
-        for row in c.fetchall():   
-            if(row[1] > 0):
-                allActionTotal += row[1]
+        results = c.fetchall()
+
+        for row in results:   
+            if(row[2] > 0):
+                allActionTotal += row[2]
                 if(row[0] == action):
-                    actionTotal = row[1]
+                    actionTotal = row[2]
 
         if(allActionTotal > 0):
             percent = actionTotal / float(allActionTotal)
@@ -99,7 +115,7 @@ class Database:
 
         return percent
 
-    def updateAction(self, action):
+    def updateAction(self, action, character):
         """
             Brief: updateAction
 
@@ -113,11 +129,18 @@ class Database:
 
         c.execute('''UPDATE [action_likelihood]
                      SET [times_used] = [times_used] + 1
-                     WHERE [action] = ?''', (action,))
+                     WHERE [action] = ?
+                         AND [agent_type] = ?;''', (action, character))
 
-        c.execute('''UPDATE [action_likelihood]
-                     SET [percentage] = ?
-                     WHERE [action] = ?''', (self.determinePercent(action), action))
+        conn.commit()
+
+        for update in ["escaped", "investigated", "ran", "attacked"]:
+            c.execute('''UPDATE [action_likelihood]
+                         SET [percentage] = ?
+                         WHERE [action] = ?
+                             AND [agent_type] = ?;''', (self.determinePercent(update, character), update, character))
+            conn.commit()
+
 
         self.closeConnection(conn)
 
@@ -141,7 +164,7 @@ class Database:
 
         c.execute('''UPDATE [story_outcomes]
                      SET [times_won] = [times_won] + 1
-                     WHERE [winner] = ?''', (winner,))
+                     WHERE [winner] = ?;''', (winner,))
 
         self.closeConnection(conn)
  
@@ -168,7 +191,7 @@ class Database:
 
         return conn
 
-    def getActionUsage(self, action):
+    def getActionUsage(self, action, character):
         """
             Brief: getActionUsage
 
@@ -182,14 +205,12 @@ class Database:
 
         c = conn.cursor()
 
-        t = (action,)
-
         c.execute('''SELECT [percentage]
                  FROM [action_likelihood]
-                 WHERE [action] = ?''', t)
+                 WHERE [action] = ?
+                     AND [agent_type] = ?;''', (action, character))
 
         percentage = c.fetchone()[0]
-
 
         self.closeConnection(conn)
 

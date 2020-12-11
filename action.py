@@ -163,9 +163,9 @@ class Action:
         dataConnection = Database()
 
         if(character.isMonster()):
-            tensionModifier = 1 - dataConnection.getActionUsage(action)
+            tensionModifier = 1 - dataConnection.getActionUsage(action, character.characterType)
         else:
-            tensionModifier = 1 + dataConnection.getActionUsage(action)
+            tensionModifier = 1 + dataConnection.getActionUsage(action, character.characterType)
 
         if(action == Action.ESCAPED):
             nextState = Story((state.tension - 1) * tensionModifier, state.numHumans, state.numMonsters, state.numHumansDead, state.numEscaped, state.numMonstersDead, state.storyComplete)
